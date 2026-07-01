@@ -1,195 +1,196 @@
 #include <iostream>
 #include <fstream>
-#include <cstring>
 #include <string>
 
 class Account {
 private:
+    // Keep account number, password, name, and balance private for security
     unsigned int acc;
     std::string pass;
+    std::string name;
+    float balance;
 
 public:
-    float balance;
-    float wd;
-    float dep;
-    std::string name;
-    std::string logpass;
-    unsigned int logacc;
+    // Setup default values when an account object is created
+    Account() : acc(0), pass(""), name(""), balance(0.0f) {}
 
-    Account() : balance(0), acc(0) {}
+    // Quick functions to grab balance and account details safely
+    float getBalance() const { return balance; }
+    unsigned int getAccountNo() const { return acc; }
 
-    void start();
+    // Core banking options
     void withdraw();
     void deposit();
-    void details();
+    void displayDetails() const;
     void signup();
-    void login();
-    void saveData();
+    bool login();
+    
+    // Save and load stuff to a text file
+    void saveData() const;
     void loadData();
 };
 
-void Account::start() {
-    balance = 0;
-}
-
 void Account::withdraw() {
+    float amount;
     std::cout << "\nEnter the Withdraw Amount: ";
-    std::cin >> wd;
-    if (balance >= wd) {
-        balance -= wd;
-        std::cout << "\n" << wd << " is Withdrawn from balance. Your current balance is " << balance << "\n";
+    std::cin >> amount;
+    
+    if (balance >= amount) {
+        balance -= amount;
+        std::cout << "\n$" << amount << " taken out. Current balance: $" << balance << "\n";
+        saveData(); // Save changes right away
     } else {
-        std::cout << "\nInsufficient Balance, Please Deposit cash before Withdraw.\n";
+        std::cout << "\nError: Not enough money in your account.\n";
     }
-    saveData();
 }
 
 void Account::deposit() {
+    float amount;
     std::cout << "\nEnter Amount to be deposited: ";
-    std::cin >> dep;
-    balance += dep;
-    std::cout << "\n" << dep << " is added to balance successfully.\n";
-    saveData();
+    std::cin >> amount;
+    
+    if (amount > 0) {
+        balance += amount;
+        std::cout << "\n$" << amount << " added to balance successfully.\n";
+        saveData(); // Save changes right away
+    } else {
+        std::cout << "\nError: Deposit must be more than 0.\n";
+    }
 }
 
-void Account::details() {
-    std::cout << "\n\t\tSASTA BANK\n";
-    std::cout << "\nAccount No.\tName\t\tBalance\n";
-    std::cout << acc << "\t" << name << "\t" << balance << "\n";
+void Account::displayDetails() const {
+    std::cout << "\n====================================";
+    std::cout << "\n\t\tSASTA BANK";
+    std::cout << "\n====================================";
+    std::cout << "\nAccount No:\t" << acc;
+    std::cout << "\nName:\t\t" << name;
+    std::cout << "\nBalance:\t$" << balance;
+    std::cout << "\n====================================\n";
 }
 
 void Account::signup() {
-    std::cout << "\nWelcome to SASTA BANK Account creation portal\n";
-    std::cout << "\nENTER your Name: ";
-    std::cin >> name;
-    std::cout << "\nEnter your 9 digit account code: ";
+    std::cout << "\n--- Welcome to SASTA BANK Portal ---\n";
+    std::cout << "Enter your Name: ";
+    std::cin.ignore(); // Clear any leftover spaces/newlines
+    std::getline(std::cin, name); // Let user type full name with spaces
+    
+    std::cout << "Enter your 9-digit account code: ";
     std::cin >> acc;
-    std::cout << "\nEnter your password (at least 9 characters): ";
-    std::cin >> pass;
 
-    if (pass.length() < 9) {
-        std::cout << "Insufficient length of password. Please retry.\n";
-        signup();
+    // Use a loop so the program doesn't crash if they mess up the password
+    while (true) {
+        std::cout << "Enter your password (at least 9 characters): ";
+        std::cin >> pass;
+        if (pass.length() >= 9) {
+            break; // Password is long enough, move on
+        }
+        std::cout << "Error: Password is too short. Try again.\n\n";
     }
 
-    std::cout << "\nYou have to keep a minimum balance of 5000 in Account before using our services.\n";
-    std::cout << "Want to add minimum balance now? If Yes press 1, Else press 2: ";
+    std::cout << "\nNote: A minimum balance of $5000 is recommended.\n";
+    std::cout << "Deposit minimum balance now? (1 = Yes, 2 = No): ";
     int choice;
     std::cin >> choice;
     if (choice == 1) {
         deposit();
     } else {
-        std::cout << "\nIt's OK, but don't forget to add it later.\n";
+        std::cout << "\nAccount created. Don't forget to add funds later.\n";
+        saveData();
     }
-    saveData();
 }
 
-void Account::login() {
-    for (int i = 0; i < 3; ++i) {
-        std::cout << "\nENTER Correct ACCOUNT NO. and Password Combination for Accessing our Services\n";
-        std::cout << "Account no: ";
-        std::cin >> logacc;
-        std::cout << "Password: ";
-        std::cin >> logpass;
+bool Account::login() {
+    unsigned int inputAcc;
+    std::string inputPass;
 
-        if (logacc == acc && logpass == pass) {
-            std::cout << "\nLogin Successful! Enjoy your Services.\n";
-            return;
+    // Give them 3 tries to get it right
+    for (int attempts = 1; attempts <= 3; ++attempts) {
+        std::cout << "\n--- Login (Attempt " << attempts << "/3) ---";
+        std::cout << "\nAccount No: ";
+        std::cin >> inputAcc;
+        std::cout << "Password: ";
+        std::cin >> inputPass;
+
+        if (inputAcc == acc && inputPass == pass) {
+            std::cout << "\nLogin Successful!\n";
+            return true;
         } else {
-            std::cout << "\nIncorrect Account No. or Password. Please try again.\n";
+            std::cout << "Wrong account number or password.\n";
         }
     }
 
-    std::cout << "\nDid you Forget Password? Press 1 if yes, 2 if you remember: ";
+    std::cout << "\nFailed 3 times. Reset account details? (1 = Yes, 2 = No): ";
     int choice;
     std::cin >> choice;
     if (choice == 1) {
         signup();
+        return true; 
     }
+    return false;
 }
 
-void Account::saveData() {
+void Account::saveData() const {
     std::ofstream outFile("account_data.txt");
     if (outFile.is_open()) {
-        outFile << acc << "\n";
-        outFile << pass << "\n";
-        outFile << balance << "\n";
-        outFile << name << "\n";
+        outFile << acc << "\n" << pass << "\n" << balance << "\n" << name << "\n";
         outFile.close();
     } else {
-        std::cout << "Unable to open file for writing.\n";
+        std::cerr << "File Error: Could not save data.\n";
     }
 }
 
 void Account::loadData() {
     std::ifstream inFile("account_data.txt");
     if (inFile.is_open()) {
-        inFile >> acc;
-        inFile >> pass;
-        inFile >> balance;
-        inFile >> name;
+        inFile >> acc >> pass >> balance;
+        inFile.ignore(); // Clean up formatting boundary
+        std::getline(inFile, name); // Read the full name line
         inFile.close();
-    } else {
-        std::cout << "Unable to open file for reading.\n";
     }
 }
 
 int main() {
-    Account a;
-    a.start();
-    a.loadData();
+    Account userAccount;
+    userAccount.loadData(); // Load saved user info if the file exists
 
-    std::cout << "\n\t\tWelcome TO Sasta Bank\n";
+    std::cout << "\n====================================";
+    std::cout << "\n\tWelcome to Sasta Bank";
+    std::cout << "\n====================================";
 
-    char x;
-    do {
-        std::cout << "\nCHOOSE Option from the given menu:\n";
-        std::cout << "1: Create Account (Ignore if already created)\n";
-        std::cout << "2: Login (necessary to use other services)\n";
-        std::cout << "Enter Your Choice: ";
-        int choice;
+    int choice;
+    bool systemRunning = true;
+
+    while (systemRunning) {
+        std::cout << "\nMAIN MENU:\n1: Register Account\n2: Login\n3: Exit\nChoice: ";
         std::cin >> choice;
 
         switch (choice) {
             case 1:
-                a.signup();
+                userAccount.signup();
                 break;
             case 2:
-                a.login();
-                char x;
-                do {
-                    std::cout << "\nCHOOSE Option from the given menu:\n";
-                    std::cout << "1: Withdraw\n";
-                    std::cout << "2: Deposit\n";
-                    std::cout << "3: Details\n";
-                    std::cout << "4: Exit\n";
-                    std::cout << "Enter Your Choice: ";
-                    std::cin >> choice;
-                    switch (choice) {
-                        case 1:
-                            a.withdraw();
-                            break;
-                        case 2:
-                            a.deposit();
-                            break;
-                        case 3:
-                            a.details();
-                            break;
-                        case 4:
-                            return 0;
-                        default:
-                            std::cout << "\nInvalid Choice. Please try again.\n";
+                if (userAccount.login()) {
+                    bool sessionActive = true;
+                    while (sessionActive) {
+                        std::cout << "\nSERVICES:\n1: Withdraw\n2: Deposit\n3: View Details\n4: Logout\nChoice: ";
+                        std::cin >> choice;
+                        switch (choice) {
+                            case 1: userAccount.withdraw(); break;
+                            case 2: userAccount.deposit(); break;
+                            case 3: userAccount.displayDetails(); break;
+                            case 4: sessionActive = false; break; // Logs out to main menu
+                            default: std::cout << "Invalid choice.\n";
+                        }
                     }
-                    std::cout << "\nWant to continue? [y/n]: ";
-                    std::cin >> x;
-                } while (x == 'y' || x == 'Y');
+                }
+                break;
+            case 3:
+                systemRunning = false;
+                std::cout << "\nThanks for using Sasta Bank. Bye!\n";
                 break;
             default:
-                std::cout << "\nInvalid Choice. Please try again.\n";
+                std::cout << "Invalid menu choice.\n";
         }
-        std::cout << "\nWant to continue? [y/n]: ";
-        std::cin >> x;
-    } while (x == 'y' || x == 'Y');
-
+    }
     return 0;
 }
